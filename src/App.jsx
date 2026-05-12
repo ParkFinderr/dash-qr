@@ -1,121 +1,147 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { QRCodeSVG } from 'qrcode.react'
+import { useEffect, useMemo, useState } from 'react'
+import { getActiveTicket } from './api'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [isLoading, setIsLoading] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const [qrFormat, setQrFormat] = useState('raw')
+  const [ticketData, setTicketData] = useState({
+    qrCode: 'PF-DEFAULT',
+    name: 'John Doe',
+    plateNumber: 'B 1234 XYZ',
+    parkingLocation: 'Gedung A, Slot 1-A'
+  })
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const guestSessionId = params.get('guestSessionId')
+    const token = params.get('token')
+    const qrCode = params.get('qrCode') || params.get('ticket') || params.get('ticketId')
+    const name = params.get('name')
+    const plateNumber = params.get('plate') || params.get('plateNumber')
+    const parkingLocation = params.get('parking') || params.get('parkingLocation')
+    const requestedFormat = (params.get('format') || 'raw').toLowerCase()
+
+    setQrFormat(requestedFormat === 'json' ? 'json' : 'raw')
+
+    if (qrCode) {
+      setTicketData({
+        qrCode,
+        name: name || 'Guest User',
+        plateNumber: plateNumber || '-',
+        parkingLocation: parkingLocation || 'General Parking'
+      })
+      return
+    }
+
+    if (!guestSessionId && !token) {
+      return
+    }
+
+    const loadTicket = async () => {
+      setIsLoading(true)
+      setLoadError('')
+
+      const result = await getActiveTicket({ guestSessionId, token })
+      if (!result.success) {
+        setLoadError(result.error || 'Gagal memuat tiket dari backend.')
+        setIsLoading(false)
+        return
+      }
+
+      const payload = result.data?.data || result.data
+      setTicketData({
+        qrCode: payload?.qrCode || payload?.ticketId || payload?.ticketCode || payload?.code || 'PF-DEFAULT',
+        name: payload?.name || 'Guest User',
+        plateNumber: payload?.plateNumber || payload?.plate || '-',
+        parkingLocation: payload?.parkingLocation || payload?.parking || 'General Parking'
+      })
+      setIsLoading(false)
+    }
+
+    loadTicket()
+  }, [])
+
+  const qrValue = useMemo(() => {
+    if (qrFormat === 'json') {
+      return JSON.stringify({
+        qrCode: ticketData.qrCode,
+        name: ticketData.name,
+        plateNumber: ticketData.plateNumber,
+        parkingLocation: ticketData.parkingLocation
+      })
+    }
+
+    // Default payload plain text agar scanner website lain bisa langsung kirim ke body qrCode.
+    return ticketData.qrCode
+  }, [qrFormat, ticketData])
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <GenerateTicketView
+      isLoading={isLoading}
+      loadError={loadError}
+      ticketData={ticketData}
+      qrValue={qrValue}
+      qrFormat={qrFormat}
+    />
+  )
+}
+
+function GenerateTicketView({ isLoading, loadError, ticketData, qrValue, qrFormat }) {
+  return (
+    <div className="dashboard-container">
+      <div className="ticket-card">
+        <div className="header-row">
+          <div className="logo-text">PARKFINDER</div>
+          <div className="status-badge">Aktif</div>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
+
+        <div className="qr-section">
+          <div className="qr-wrapper">
+            <QRCodeSVG
+              value={qrValue}
+              size={200}
+              level={'H'}
+              includeMargin={true}
+            />
+          </div>
+          <p className="instruction-text">
+            QR ini berisi {qrFormat === 'json' ? 'JSON dengan field qrCode' : 'plain qrCode'} untuk endpoint scan tiket di website lain.
           </p>
+          {isLoading && <p className="instruction-text">Memuat data tiket dari backend...</p>}
+          {loadError && <p className="error-inline">{loadError}</p>}
         </div>
+
+        <div className="ticket-details">
+          <div className="detail-item">
+            <span className="detail-label">Kode Tiket</span>
+            <span className="detail-value">{ticketData.qrCode}</span>
+          </div>
+          <div className="detail-item">
+            <span className="detail-label">Nama</span>
+            <span className="detail-value">{ticketData.name}</span>
+          </div>
+          <div className="detail-item">
+            <span className="detail-label">Plat Nomor</span>
+            <span className="detail-value">{ticketData.plateNumber}</span>
+          </div>
+          <div className="detail-item">
+            <span className="detail-label">Lokasi</span>
+            <span className="detail-value">{ticketData.parkingLocation}</span>
+          </div>
+        </div>
+
         <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+          className="action-button"
+          onClick={() => {
+            alert('Mengunduh tiket sebagai gambar... (Simulasi)');
+          }}
         >
-          Count is {count}
+          Simpan Tiket
         </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      </div>
+    </div>
   )
 }
 
