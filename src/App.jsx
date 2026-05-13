@@ -7,47 +7,63 @@ function App() {
   const [loadError, setLoadError] = useState('')
   const [qrFormat, setQrFormat] = useState('raw')
   const [ticketData, setTicketData] = useState({
-    qrCode: 'PF-1778311898289-a9df7436'
+    qrCode: 'PF-DEFAULT'
   })
+  const [guestSessionId, setGuestSessionId] = useState(null)
+  const [token, setToken] = useState(null)
+  const [refreshInterval, setRefreshInterval] = useState(5000) // Auto-refresh setiap 5 detik
+
+  const loadTicket = async (guestSId, authToken) => {
+    if (!guestSId && !authToken) return
+
+    setIsLoading(true)
+    setLoadError('')
+
+    const result = await getActiveTicket({ guestSessionId: guestSId, token: authToken })
+    if (!result.success) {
+      setLoadError(result.error || 'Gagal memuat tiket dari backend.')
+      setIsLoading(false)
+      return
+    }
+
+    const payload = result.data?.data || result.data
+    setTicketData({
+      qrCode: payload?.qrCode || payload?.code || payload?.ticketCode || 'PF-DEFAULT'
+    })
+    setIsLoading(false)
+  }
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const guestSessionId = params.get('guestSessionId')
-    const token = params.get('token')
+    const guestSId = params.get('guestSessionId')
+    const authToken = params.get('token')
     const qrCode = params.get('qrCode') || params.get('code')
     const requestedFormat = (params.get('format') || 'raw').toLowerCase()
 
     setQrFormat(requestedFormat === 'json' ? 'json' : 'raw')
+    setGuestSessionId(guestSId)
+    setToken(authToken)
 
     if (qrCode) {
       setTicketData({ qrCode })
       return
     }
 
-    if (!guestSessionId && !token) {
-      return
+    if (guestSId || authToken) {
+      loadTicket(guestSId, authToken)
     }
-
-    const loadTicket = async () => {
-      setIsLoading(true)
-      setLoadError('')
-
-      const result = await getActiveTicket({ guestSessionId, token })
-      if (!result.success) {
-        setLoadError(result.error || 'Gagal memuat tiket dari backend.')
-        setIsLoading(false)
-        return
-      }
-
-      const payload = result.data?.data || result.data
-      setTicketData({
-        qrCode: payload?.qrCode || payload?.code || payload?.ticketCode || 'PF-1778311898289-a9df7436'
-      })
-      setIsLoading(false)
-    }
-
-    loadTicket()
   }, [])
+
+  // Auto-refresh tiket terbaru dari backend setiap N detik
+  useEffect(() => {
+    if (!guestSessionId && !token) return
+
+    const interval = setInterval(() => {
+      loadTicket(guestSessionId, token)
+    }, refreshInterval)
+
+    return () => clearInterval(interval)
+  }, [guestSessionId, token, refreshInterval])
 
   const qrValue = useMemo(() => {
     if (qrFormat === 'json') {
@@ -60,6 +76,12 @@ function App() {
     return ticketData.qrCode
   }, [qrFormat, ticketData])
 
+  const handleRefreshNow = () => {
+    if (guestSessionId || token) {
+      loadTicket(guestSessionId, token)
+    }
+  }
+
   return (
     <GenerateTicketView
       isLoading={isLoading}
@@ -67,11 +89,13 @@ function App() {
       ticketData={ticketData}
       qrValue={qrValue}
       qrFormat={qrFormat}
+      onRefresh={handleRefreshNow}
+      hasBackendAuth={!!(guestSessionId || token)}
     />
   )
 }
 
-function GenerateTicketView({ isLoading, loadError, ticketData, qrValue, qrFormat }) {
+function GenerateTicketView({ isLoading, loadError, ticketData, qrValue, qrFormat, onRefresh, hasBackendAuth }) {
   return (
     <div className="dashboard-container">
       <div className="ticket-card">
@@ -94,6 +118,25 @@ function GenerateTicketView({ isLoading, loadError, ticketData, qrValue, qrForma
           </p>
           {isLoading && <p className="instruction-text">Memuat data tiket dari backend...</p>}
           {loadError && <p className="error-inline">{loadError}</p>}
+          {hasBackendAuth && (
+            <button
+              onClick={onRefresh}
+              disabled={isLoading}
+              style={{
+                marginTop: '12px',
+                padding: '8px 16px',
+                backgroundColor: '#00D4FF',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#000',
+                fontWeight: 'bold',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                opacity: isLoading ? 0.6 : 1
+              }}
+            >
+              {isLoading ? 'Memuat...' : 'Refresh Tiket'}
+            </button>
+          )}
         </div>
 
         <div className="ticket-details">
