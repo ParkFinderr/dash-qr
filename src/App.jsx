@@ -17,7 +17,7 @@ function App() {
     const params = new URLSearchParams(window.location.search)
     const guestSessionId = params.get('guestSessionId')
     const token = params.get('token')
-    const qrCode = params.get('qrCode') || params.get('ticket') || params.get('ticketId')
+    const qrCode = params.get('qrCode') || params.get('code')
     const name = params.get('name')
     const plateNumber = params.get('plate') || params.get('plateNumber')
     const parkingLocation = params.get('parking') || params.get('parkingLocation')
@@ -52,7 +52,7 @@ function App() {
 
       const payload = result.data?.data || result.data
       setTicketData({
-        qrCode: payload?.qrCode || payload?.ticketId || payload?.ticketCode || payload?.code || 'PF-DEFAULT',
+        qrCode: payload?.qrCode || payload?.code || payload?.ticketCode || 'PF-DEFAULT',
         name: payload?.name || 'Guest User',
         plateNumber: payload?.plateNumber || payload?.plate || '-',
         parkingLocation: payload?.parkingLocation || payload?.parking || 'General Parking'
