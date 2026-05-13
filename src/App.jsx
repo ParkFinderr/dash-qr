@@ -7,7 +7,8 @@ function App() {
   const [loadError, setLoadError] = useState('')
   const [qrFormat, setQrFormat] = useState('raw')
   const [ticketData, setTicketData] = useState({
-    qrCode: 'PF-DEFAULT'
+    qrCode: 'PF-DEFAULT',
+    guestSessionId: null
   })
   const [guestSessionId, setGuestSessionId] = useState(null)
   const [token, setToken] = useState(null)
@@ -28,7 +29,8 @@ function App() {
 
     const payload = result.data?.data || result.data
     setTicketData({
-      qrCode: payload?.qrCode || payload?.code || payload?.ticketCode || 'PF-DEFAULT'
+      qrCode: payload?.qrCode || payload?.code || payload?.ticketCode || 'PF-DEFAULT',
+      guestSessionId: guestSId // Store guestSessionId untuk dikirim ke scanner
     })
     setIsLoading(false)
   }
@@ -67,12 +69,14 @@ function App() {
 
   const qrValue = useMemo(() => {
     if (qrFormat === 'json') {
+      // JSON format: include both qrCode dan guestSessionId untuk context lengkap
       return JSON.stringify({
-        qrCode: ticketData.qrCode
+        qrCode: ticketData.qrCode,
+        guestSessionId: ticketData.guestSessionId
       })
     }
 
-    // Default payload plain text agar scanner website lain bisa langsung kirim ke body qrCode.
+    // Default payload plain text: hanya qrCode, guestSessionId akan di-handle via localStorage/URL param
     return ticketData.qrCode
   }, [qrFormat, ticketData])
 
