@@ -7,10 +7,7 @@ function App() {
   const [loadError, setLoadError] = useState('')
   const [qrFormat, setQrFormat] = useState('raw')
   const [ticketData, setTicketData] = useState({
-    qrCode: 'PF-DEFAULT',
-    name: 'John Doe',
-    plateNumber: 'B 1234 XYZ',
-    parkingLocation: 'Gedung A, Slot 1-A'
+    qrCode: 'PF-1778311898289-a9df7436'
   })
 
   useEffect(() => {
@@ -18,20 +15,12 @@ function App() {
     const guestSessionId = params.get('guestSessionId')
     const token = params.get('token')
     const qrCode = params.get('qrCode') || params.get('code')
-    const name = params.get('name')
-    const plateNumber = params.get('plate') || params.get('plateNumber')
-    const parkingLocation = params.get('parking') || params.get('parkingLocation')
     const requestedFormat = (params.get('format') || 'raw').toLowerCase()
 
     setQrFormat(requestedFormat === 'json' ? 'json' : 'raw')
 
     if (qrCode) {
-      setTicketData({
-        qrCode,
-        name: name || 'Guest User',
-        plateNumber: plateNumber || '-',
-        parkingLocation: parkingLocation || 'General Parking'
-      })
+      setTicketData({ qrCode })
       return
     }
 
@@ -52,10 +41,7 @@ function App() {
 
       const payload = result.data?.data || result.data
       setTicketData({
-        qrCode: payload?.qrCode || payload?.code || payload?.ticketCode || 'PF-DEFAULT',
-        name: payload?.name || 'Guest User',
-        plateNumber: payload?.plateNumber || payload?.plate || '-',
-        parkingLocation: payload?.parkingLocation || payload?.parking || 'General Parking'
+        qrCode: payload?.qrCode || payload?.code || payload?.ticketCode || 'PF-1778311898289-a9df7436'
       })
       setIsLoading(false)
     }
@@ -66,10 +52,7 @@ function App() {
   const qrValue = useMemo(() => {
     if (qrFormat === 'json') {
       return JSON.stringify({
-        qrCode: ticketData.qrCode,
-        name: ticketData.name,
-        plateNumber: ticketData.plateNumber,
-        parkingLocation: ticketData.parkingLocation
+        qrCode: ticketData.qrCode
       })
     }
 
@@ -107,7 +90,7 @@ function GenerateTicketView({ isLoading, loadError, ticketData, qrValue, qrForma
             />
           </div>
           <p className="instruction-text">
-            QR ini berisi {qrFormat === 'json' ? 'JSON dengan field qrCode' : 'plain qrCode'} untuk endpoint scan tiket di website lain.
+            QR ini hanya berisi kode tiket untuk endpoint scan di website lain.
           </p>
           {isLoading && <p className="instruction-text">Memuat data tiket dari backend...</p>}
           {loadError && <p className="error-inline">{loadError}</p>}
@@ -117,18 +100,6 @@ function GenerateTicketView({ isLoading, loadError, ticketData, qrValue, qrForma
           <div className="detail-item">
             <span className="detail-label">Kode Tiket</span>
             <span className="detail-value">{ticketData.qrCode}</span>
-          </div>
-          <div className="detail-item">
-            <span className="detail-label">Nama</span>
-            <span className="detail-value">{ticketData.name}</span>
-          </div>
-          <div className="detail-item">
-            <span className="detail-label">Plat Nomor</span>
-            <span className="detail-value">{ticketData.plateNumber}</span>
-          </div>
-          <div className="detail-item">
-            <span className="detail-label">Lokasi</span>
-            <span className="detail-value">{ticketData.parkingLocation}</span>
           </div>
         </div>
 

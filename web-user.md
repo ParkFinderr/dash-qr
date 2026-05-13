@@ -4,8 +4,8 @@ Dokumen ini dipakai untuk debug website lain (web scanner) agar bisa membaca QR 
 
 ## 1. Kontrak Data yang Wajib Sama
 
-Sumber QR (project ini) default meng-encode nilai **plain text**:
-- Contoh: `PF-1778311898289-a9df7436`
+Sumber QR (project ini) default meng-encode nilai **plain text kode tiket**:
+Contoh: `PF-1778311898289-a9df7436`
 
 Endpoint scan tiket (backend):
 - `POST /access/verify`
@@ -18,7 +18,8 @@ Endpoint scan tiket (backend):
 ```
 
 Catatan:
-- Jangan kirim key `ticketId` jika endpoint scan kamu mengharuskan `qrCode`.
+- Jangan kirim key lain seperti `ticketId`, `name`, `plateNumber`, atau `parkingLocation`.
+- QR dari website ini harus dianggap sebagai satu string kode tiket saja.
 - Jika scanner membaca JSON QR, tetap ambil field `qrCode` lalu kirim sebagai body di atas.
 
 ## 2. Cara Generate QR Test dari Project Ini
@@ -30,16 +31,16 @@ Mode paling aman (disarankan untuk scanner lain):
 http://localhost:5173/?qrCode=PF-1778311898289-a9df7436
 ```
 
-Mode JSON (jika scanner memang butuh JSON):
+Mode JSON (opsional, hanya jika scanner memang butuh JSON):
 ```txt
-http://localhost:5173/?qrCode=PF-1778311898289-a9df7436&name=User+Test&plateNumber=B+1234+XYZ&parkingLocation=Gedung+A&format=json
+http://localhost:5173/?qrCode=PF-1778311898289-a9df7436&format=json
 ```
 
 ## 3. Checklist Debug di Website Scanner
 
 1. Pastikan hasil decode dari kamera tercetak di console.
 2. Pastikan nilai decode tidak kosong dan tidak ada spasi ekstra di kiri/kanan.
-3. Pastikan request ke backend mengirim body key `qrCode`.
+3. Pastikan request ke backend mengirim body key `qrCode` saja.
 4. Pastikan header auth sesuai mode endpoint:
    - User mode: wajib `Authorization: Bearer <token>`.
    - Guest mode: endpoint guest tidak perlu token (jika backend mendukung).
